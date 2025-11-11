@@ -6,6 +6,8 @@ interface UploadResponse {
     map: { width: number; height: number; contours: any[][] };
     evidence: any[];
     baseImage: string;
+    edgesImage?: string;
+    savedEdgesPath?: string;
 }
 
 interface FileUploadProps {
@@ -53,10 +55,19 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
                     <label>Evidence (CSV): </label>
                     <input type="file" name="evidence" accept=".csv" />
                 </div>
+
                 <button type="submit" disabled={uploading}>
-                    {uploading ? 'Uploading...' : 'Upload'}
+                    {uploading ? 'Processing with LIDAR...' : 'Upload & Process'}
                 </button>
             </form>
+            
+            {uploading && (
+                <div className="processing-info">
+                    <p>🔄 Processing map with advanced LIDAR algorithm...</p>
+                    <small>Gap filling, noise reduction, and edge detection</small>
+                </div>
+            )}
+            
             {error && <p style={{ color: 'red' }}>{error}</p>}
         </div>
     );

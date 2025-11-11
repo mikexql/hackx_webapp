@@ -1,3 +1,4 @@
+/* Existing styles */
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -11,9 +12,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -39,4 +42,198 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* New LIDAR Integration Styles */
+
+/* Processing Info */
+.processing-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: #e8f4f8;
+    border-radius: 6px;
+    border: 1px solid #b8dce8;
+    text-align: center;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.processing-info p {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+    color: #1a5c75;
+}
+
+.processing-info small {
+    color: #5a8a9c;
+    font-size: 0.85rem;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* View Controls */
+.view-controls {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
+}
+
+.toggle-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #007bff;
+}
+
+.toggle-label span {
+    user-select: none;
+}
+
+/* Button Group */
+.button-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin: 20px auto;
+    max-width: 1200px;
+}
+
+.button-group button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.button-group button:not(.secondary) {
+    background: #28a745;
+    color: white;
+}
+
+.button-group button:not(.secondary):hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.button-group button.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.button-group button.secondary:hover {
+    background: #545b62;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* Upload Container Improvements */
+.upload-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.upload-container h2 {
+    margin-top: 0;
+    color: #333;
+    text-align: center;
+}
+
+.upload-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.upload-container form > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upload-container label {
+    font-weight: 600;
+    color: #555;
+    text-align: left;
+}
+
+.upload-container input[type="file"] {
+    padding: 10px;
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.upload-container input[type="file"]:hover {
+    border-color: #007bff;
+}
+
+.upload-container button[type="submit"] {
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 10px;
+}
+
+.upload-container button[type="submit"]:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+.upload-container button[type="submit"]:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .upload-container {
+        margin: 20px;
+        padding: 20px;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .button-group button {
+        width: 100%;
+    }
+
+    .view-controls {
+        margin: 15px;
+    }
 }
