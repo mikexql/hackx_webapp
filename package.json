@@ -4,13 +4,29 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix web\"",
-    "build": "npm run build --prefix server && npm run build --prefix web"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.410.0",
+    "csv-parse": "^6.1.0",
+    "next": "^16.0.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sharp": "^0.34.5",
+    "simplify-js": "^1.2.4",
+    "yaml": "^2.8.1"
+  },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.36.0",
+    "typescript": "~5.9.3"
   }
 }
