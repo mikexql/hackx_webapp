@@ -6,10 +6,11 @@ import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MapData, Evidence } from '@/types/types';
-import type { CaseSummary, CaseStatus } from '@/types/case';
+import type { CaseSummary, CaseStatus, CaseMetadata } from '@/types/case';
 import StatusBadge from '@/components/StatusBadge';
+import type { MapEditorProps } from '@components/MapEditor';
 
-const MapEditor = dynamic(() => import('@/components/MapEditor'), { ssr: false });
+const MapEditor = dynamic<MapEditorProps>(() => import('@components/MapEditor'), { ssr: false });
 
 interface Props {
   caseId: string;
@@ -20,6 +21,14 @@ type CaseResponse = {
   evidence: Evidence[];
   baseImage: string;
   summary?: CaseSummary;
+  error?: string;
+};
+
+type SaveResponse = {
+  success?: boolean;
+  key?: string;
+  evidence?: Evidence[];
+  metadata?: CaseMetadata | null;
   error?: string;
 };
 
@@ -112,17 +121,30 @@ export default function CaseViewerClient({ caseId }: Props) {
   const handleSave = async () => {
     try {
       setSaving(true);
+      const metadataPayload = details
+        ? {
+            title: details.title?.trim() || details.title,
+            description: details.description?.trim() || details.description,
+            status: details.status,
+            createdBy: details.createdBy?.trim() || details.createdBy,
+            tags: details.tags ?? [],
+          }
+        : undefined;
       const res = await fetch(`/api/cases/${encodeURIComponent(caseId)}/evidence`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evidence })
+        body: JSON.stringify({ evidence, metadata: metadataPayload })
       });
-      const json = await res.json();
+      const json: SaveResponse = await res.json();
       if (!res.ok) throw new Error(json.error || 'Save failed');
       if (Array.isArray(json.evidence)) {
         setEvidence(json.evidence);
       }
-      toast.success('Evidence markers saved back to S3');
+      if (json.metadata) {
+        setDetails((prev) => (prev ? { ...prev, ...json.metadata } : prev));
+        setSummary((prev) => (prev ? { ...prev, ...json.metadata } : prev));
+      }
+      toast.success('Successfully saved changes');
     } catch (err: any) {
       toast.error(err.message || 'Failed to save evidence');
     } finally {
@@ -188,7 +210,6 @@ export default function CaseViewerClient({ caseId }: Props) {
         <section className="rounded-2xl sm:rounded-[32px] border border-border/40 bg-card/50 p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base sm:text-lg font-semibold">Case Details & Settings</h2>
-            <span className="text-xs sm:text-sm text-muted-foreground">{evidence.length} markers tracked</span>
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <div className="space-y-4">

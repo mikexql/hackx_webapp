@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { Clock, MapPin, Search, User, PlusCircle } from 'lucide-react';
+import { Clock, MapPin, Search, User, PlusCircle, BadgeInfo } from 'lucide-react';
 import type { CaseSummary } from '@/types/case';
 import StatusBadge from '@/components/StatusBadge';
 
@@ -53,18 +53,17 @@ export default function CasesPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-xs uppercase tracking-[0.2em] text-primary">Live Operations</p>
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">HackX Case Management</h1>
-              <p className="text-sm sm:text-base text-muted-foreground">Map viewer & evidence tracker connected to S3</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Case Management</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">View and manage all active cases</p>
             </div>
-            <button
+            {/* <button
               type="button"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:bg-primary/90 mt-4 sm:mt-0 sm:ml-4 flex-shrink-0"
             >
               <PlusCircle className="h-4 w-4" />
               <span className="hidden sm:inline">New Case</span>
               <span className="sm:hidden">New</span>
-            </button>
+            </button> */}
           </div>
 
           <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center">
@@ -86,10 +85,6 @@ export default function CasesPage() {
               <div className="rounded-xl border border-border/40 bg-card/40 px-2 sm:px-4 py-2 sm:py-3">
                 <p className="text-xs uppercase">Open</p>
                 <p className="text-xl sm:text-2xl font-semibold text-foreground">{openCases}</p>
-              </div>
-              <div className="rounded-xl border border-border/40 bg-card/40 px-2 sm:px-4 py-2 sm:py-3">
-                <p className="text-xs uppercase">Markers</p>
-                <p className="text-xl sm:text-2xl font-semibold text-foreground">{totalMarkers}</p>
               </div>
             </div>
           </div>
@@ -122,7 +117,7 @@ export default function CasesPage() {
                   <div className="relative flex flex-1 flex-col">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 flex-1">
-                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <BadgeInfo className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate text-xs">{caseItem.id}</span>
                       </div>
                       <StatusBadge status={caseItem.status} />

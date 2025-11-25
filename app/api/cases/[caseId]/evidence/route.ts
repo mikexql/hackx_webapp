@@ -3,6 +3,8 @@ import { putObjectBuffer, listObjectsForCase, getObjectBuffer, buildCaseObjectKe
 import parsePGM from '@lib/parsePGM';
 import parseYAML from '@lib/parseYAML';
 import { pixelToWorld, convertEvidenceToPixels } from '@lib/mapUtils';
+import { CASE_METADATA_FILENAME, CaseMetadataPatch, ensureMetadataFile, upsertCaseMetadata } from '@lib/caseMetadata';
+import type { CaseMetadata } from '@/types/case';
 
 type EvidencePayload = {
   id?: string;
@@ -12,7 +14,7 @@ type EvidencePayload = {
   pixel?: { x: number; y: number };
 };
 
-type Body = { evidence: any[]; filename?: string };
+type Body = { evidence: any[]; filename?: string; metadata?: unknown };
 
 const CSV_HEADERS = ['id', 'x', 'y', 'time'] as const;
 
@@ -68,9 +70,11 @@ export async function POST(request: Request, context: { params: Promise<{ caseId
     }
 
     const evidenceKeyFromBucket = objects.find(o => o.key.toLowerCase().includes('evidence') && o.key.toLowerCase().endsWith('.csv'))?.key;
+    const hasMetadataFile = objects.some((o) => o.key.toLowerCase().endsWith(`/${CASE_METADATA_FILENAME}`) || o.key.toLowerCase().endsWith(CASE_METADATA_FILENAME));
     const derivedName = evidenceKeyFromBucket?.split('/').pop();
     const filename = (body.filename && body.filename.trim()) || derivedName || `${caseId}_evidence.csv`;
     const targetKey = buildCaseObjectKey(caseId, filename);
+    const metadataPatch = extractMetadataPatch(body.metadata);
 
     const [pgmBuf, yamlBuf] = await Promise.all([
       getObjectBuffer(pgmKey),
@@ -92,10 +96,31 @@ export async function POST(request: Request, context: { params: Promise<{ caseId
     }));
     const evidenceWithPixels = convertEvidenceToPixels(evidenceObjects, yaml.origin, yaml.resolution, pgm.height);
 
-    return NextResponse.json({ success: true, key: targetKey, evidence: evidenceWithPixels });
+    let metadataResult: CaseMetadata | null = null;
+    if (metadataPatch) {
+      metadataResult = await upsertCaseMetadata(caseId, metadataPatch);
+    } else if (!hasMetadataFile) {
+      metadataResult = await ensureMetadataFile(caseId);
+    }
+
+    return NextResponse.json({ success: true, key: targetKey, evidence: evidenceWithPixels, metadata: metadataResult });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || String(err) }, { status: 500 });
   }
+}
+
+function extractMetadataPatch(raw: unknown): CaseMetadataPatch | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const patch: CaseMetadataPatch = {};
+  const source = raw as Record<string, unknown>;
+  if (typeof source.title === 'string') patch.title = source.title;
+  if (typeof source.description === 'string') patch.description = source.description;
+  if (typeof source.createdBy === 'string') patch.createdBy = source.createdBy;
+  if (typeof source.status === 'string') patch.status = source.status as CaseMetadataPatch['status'];
+  if (Array.isArray(source.tags)) {
+    patch.tags = source.tags.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean);
+  }
+  return Object.keys(patch).length ? patch : null;
 }
 
 function buildCsvRows(

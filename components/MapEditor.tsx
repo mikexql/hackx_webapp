@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Evidence, MapData } from "../types/types";
 
-interface MapEditorProps {
+export interface MapEditorProps {
     baseImage: string;
     mapData: MapData;
     evidence: Evidence[];
@@ -92,7 +92,7 @@ export default function MapEditor({
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
         ctx.drawImage(imageLoaded, 0, 0, canvasWidth, canvasHeight);
 
-        ctx.strokeStyle = "rgba(0, 100, 255, 0.5)";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
         ctx.lineWidth = 1;
         for (const contour of mapData.contours) {
             ctx.beginPath();
@@ -109,7 +109,7 @@ export default function MapEditor({
             const x = ev.pixel.x;
             const y = ev.pixel.y;
             ctx.beginPath();
-            ctx.arc(x, y, 8, 0, 2 * Math.PI);
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
             ctx.fillStyle = selectedId === ev.id ? "#ffeb3b" : "#f44336";
             ctx.strokeStyle = "#fff";
             ctx.lineWidth = 2;

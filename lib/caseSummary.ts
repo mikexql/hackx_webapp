@@ -1,23 +1,21 @@
 import parseCSV from './parseCSV';
 import { getObjectBuffer, listAllCaseObjects, listObjectsForCase, CaseObjectSummary } from './s3';
 import type { CaseSummary, CaseStatus } from '../types/case';
-
-const CREATOR_NAMES = [
-  'Det. Marisol Chen',
-  'Det. Imani Price',
-  'Det. Rafael Ortiz',
-  'Det. Lena Gupta',
-  'Det. Ezra Miles',
-  'Det. Cole Ramirez',
-];
-
-const TAG_POOL = ['forensics', 'field', 'vault', 'metro', 'night-shift', 'intel', 'suspect-track'];
+import {
+  CASE_METADATA_FILENAME,
+  pickTags,
+  pickCreatorName,
+  prettifyCaseId,
+  hashCaseId,
+  readCaseMetadataFromKey,
+} from './caseMetadata';
 
 type CaseFileGroup = {
   id: string;
   pgmKey?: string;
   yamlKey?: string;
   csvKey?: string;
+  metadataKey?: string;
   createdAt?: string;
   updatedAt?: string;
   files: string[];
@@ -67,9 +65,11 @@ function buildGroupFromObjects(caseId: string, objects: CaseObjectSummary[]): Ca
 
 function enrichGroup(group: CaseFileGroup, absoluteKey: string, filePath: string, lastModified?: Date): CaseFileGroup {
   const lower = filePath.toLowerCase();
+  const filename = lower.split('/').pop();
   if (lower.endsWith('.pgm')) group.pgmKey = absoluteKey;
   else if (lower.endsWith('.yaml') || lower.endsWith('.yml')) group.yamlKey = absoluteKey;
   else if (lower.endsWith('.csv')) group.csvKey = absoluteKey;
+  else if (filename === CASE_METADATA_FILENAME) group.metadataKey = absoluteKey;
   group.files = Array.from(new Set([...group.files, filePath]));
   const timestamp = lastModified ? lastModified.toISOString() : undefined;
   if (timestamp) {
@@ -85,20 +85,28 @@ function enrichGroup(group: CaseFileGroup, absoluteKey: string, filePath: string
 
 async function buildSummary(group: CaseFileGroup): Promise<CaseSummary> {
   const evidenceCount = await countEvidence(group.csvKey);
-  const title = prettifyCaseId(group.id);
-  const updatedAt = group.updatedAt ?? new Date().toISOString();
-  const createdAt = group.createdAt ?? updatedAt;
-  const hash = hashId(group.id);
+  const fallbackTitle = prettifyCaseId(group.id);
+  const fallbackUpdatedAt = group.updatedAt ?? new Date().toISOString();
+  const fallbackCreatedAt = group.createdAt ?? fallbackUpdatedAt;
+  const hash = hashCaseId(group.id);
+  const metadata = group.metadataKey ? await readCaseMetadataFromKey(group.metadataKey, group.id) : null;
+  const title = metadata?.title ?? fallbackTitle;
+  const updatedAt = metadata?.updatedAt ?? fallbackUpdatedAt;
+  const createdAt = metadata?.createdAt ?? fallbackCreatedAt;
+  const description = metadata?.description ?? buildDescription(title, group.files, evidenceCount);
+  const status = metadata?.status ?? deriveStatus(evidenceCount, updatedAt, hash);
+  const createdBy = metadata?.createdBy ?? pickCreatorName(group.id);
+  const tags = metadata?.tags?.length ? metadata.tags : pickTags(group.id);
   return {
     id: group.id,
     title,
-    description: buildDescription(title, group.files, evidenceCount),
-    status: deriveStatus(evidenceCount, updatedAt, hash),
-    createdBy: CREATOR_NAMES[hash % CREATOR_NAMES.length],
+    description,
+    status,
+    createdBy,
     updatedAt,
     createdAt,
     evidenceCount,
-    tags: pickTags(group.id),
+    tags,
     files: {
       pgm: group.pgmKey ? basename(group.pgmKey) : undefined,
       yaml: group.yamlKey ? basename(group.yamlKey) : undefined,
@@ -119,19 +127,6 @@ async function countEvidence(key?: string): Promise<number> {
   }
 }
 
-function prettifyCaseId(id: string) {
-  return id
-    .replace(/[_-]+/g, ' ')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function hashId(id: string) {
-  return Array.from(id).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-}
-
 function buildDescription(title: string, files: string[], evidenceCount: number) {
   const assetSummary = files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : 'files';
   const evidenceSummary = evidenceCount === 1 ? '1 marker recorded' : `${evidenceCount} markers recorded`;
@@ -144,13 +139,6 @@ function deriveStatus(evidenceCount: number, updatedAt: string, seed: number): C
   if (ageDays < 2) return 'in-progress';
   if (evidenceCount > 8) return 'closed';
   return ['in-progress', 'archived'][seed % 2] as CaseStatus;
-}
-
-function pickTags(id: string): string[] {
-  const seed = hashId(id);
-  const first = TAG_POOL[seed % TAG_POOL.length];
-  const second = TAG_POOL[(seed + 3) % TAG_POOL.length];
-  return Array.from(new Set([first, second]));
 }
 
 function basename(key: string) {
