@@ -157,7 +157,7 @@ export default function CasesPage() {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <User className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{caseItem.createdBy || 'Unknown'}</span>
+                        <span className="truncate">{caseItem.createdBy && caseItem.createdBy.trim().length ? caseItem.createdBy.trim() : '-'}</span>
                       </div>
                     </div>
                     </div>

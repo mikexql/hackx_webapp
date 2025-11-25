@@ -3,11 +3,10 @@ import { getObjectBuffer, listAllCaseObjects, listObjectsForCase, CaseObjectSumm
 import type { CaseSummary, CaseStatus } from '../types/case';
 import {
   CASE_METADATA_FILENAME,
-  pickTags,
-  pickCreatorName,
   prettifyCaseId,
   hashCaseId,
   readCaseMetadataFromKey,
+  setCreatedAtIfEarlier,
 } from './caseMetadata';
 
 type CaseFileGroup = {
@@ -19,6 +18,12 @@ type CaseFileGroup = {
   createdAt?: string;
   updatedAt?: string;
   files: string[];
+};
+
+type EvidenceStats = {
+  count: number;
+  earliestTime?: string;
+  latestTime?: string;
 };
 
 export async function getCaseSummaries(): Promise<CaseSummary[]> {
@@ -84,19 +89,25 @@ function enrichGroup(group: CaseFileGroup, absoluteKey: string, filePath: string
 }
 
 async function buildSummary(group: CaseFileGroup): Promise<CaseSummary> {
-  const evidenceCount = await countEvidence(group.csvKey);
+  const evidenceStats = await readEvidenceStats(group.csvKey);
+  const evidenceCount = evidenceStats.count;
   const fallbackTitle = prettifyCaseId(group.id);
   const fallbackUpdatedAt = group.updatedAt ?? new Date().toISOString();
   const fallbackCreatedAt = group.createdAt ?? fallbackUpdatedAt;
   const hash = hashCaseId(group.id);
   const metadata = group.metadataKey ? await readCaseMetadataFromKey(group.metadataKey, group.id) : null;
   const title = metadata?.title ?? fallbackTitle;
-  const updatedAt = metadata?.updatedAt ?? fallbackUpdatedAt;
-  const createdAt = metadata?.createdAt ?? fallbackCreatedAt;
-  const description = metadata?.description ?? buildDescription(title, group.files, evidenceCount);
+  const derivedUpdatedAt = evidenceStats.latestTime ? mergeDateAndTime(fallbackUpdatedAt, evidenceStats.latestTime) : null;
+  const updatedAt = metadata?.updatedAt ?? derivedUpdatedAt ?? fallbackUpdatedAt;
+  const derivedCreatedAt = evidenceStats.earliestTime ? mergeDateAndTime(fallbackCreatedAt, evidenceStats.earliestTime) : null;
+  const createdAt = derivedCreatedAt ?? metadata?.createdAt ?? fallbackCreatedAt;
+  if (derivedCreatedAt) {
+    await setCreatedAtIfEarlier(group.id, derivedCreatedAt);
+  }
+  const description = normalizeField(metadata?.description);
   const status = metadata?.status ?? deriveStatus(evidenceCount, updatedAt, hash);
-  const createdBy = metadata?.createdBy ?? pickCreatorName(group.id);
-  const tags = metadata?.tags?.length ? metadata.tags : pickTags(group.id);
+  const createdBy = normalizeField(metadata?.createdBy);
+  const tags = Array.isArray(metadata?.tags) && metadata.tags.length ? metadata.tags : [];
   return {
     id: group.id,
     title,
@@ -115,22 +126,68 @@ async function buildSummary(group: CaseFileGroup): Promise<CaseSummary> {
   };
 }
 
-async function countEvidence(key?: string): Promise<number> {
-  if (!key) return 0;
+async function readEvidenceStats(key?: string): Promise<EvidenceStats> {
+  if (!key) return { count: 0 };
   try {
     const buf = await getObjectBuffer(key);
     const data = parseCSV(buf.toString('utf-8'));
-    return Array.isArray(data) ? data.length : 0;
+    if (!Array.isArray(data)) return { count: 0 };
+    let earliest: { seconds: number; value: string } | null = null;
+    let latest: { seconds: number; value: string } | null = null;
+    for (const row of data as Array<Record<string, any>>) {
+      const parsed = parseTime(row?.time);
+      if (!parsed) continue;
+      if (!earliest || parsed.seconds < earliest.seconds) {
+        earliest = parsed;
+      }
+      if (!latest || parsed.seconds > latest.seconds) {
+        latest = parsed;
+      }
+    }
+    return {
+      count: data.length,
+      earliestTime: earliest?.value,
+      latestTime: latest?.value,
+    };
   } catch (err) {
     console.warn('Failed to read evidence CSV', err);
-    return 0;
+    return { count: 0 };
   }
 }
 
-function buildDescription(title: string, files: string[], evidenceCount: number) {
-  const assetSummary = files.length ? `${files.length} file${files.length === 1 ? '' : 's'}` : 'files';
-  const evidenceSummary = evidenceCount === 1 ? '1 marker recorded' : `${evidenceCount} markers recorded`;
-  return `${title} includes ${assetSummary} in S3 with ${evidenceSummary}.`;
+function normalizeField(value?: string | null) {
+  if (typeof value === 'string' && value.trim().length) {
+    return value.trim();
+  }
+  return '-';
+}
+
+function parseTime(raw: unknown): { seconds: number; value: string } | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+    const match = trimmed.match(/^([0-1]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
+  if (!match) return null;
+  const [, hh, mm, ss] = match;
+  const hours = Number(hh);
+  const minutes = Number(mm);
+  const seconds = Number(ss ?? '0');
+  const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+  const normalized = `${hh.padStart(2, '0')}:${mm}:${(ss ?? '00').padStart(2, '0')}`;
+  return { seconds: totalSeconds, value: normalized };
+}
+
+function mergeDateAndTime(dateIso: string, time: string): string | null {
+  if (!dateIso) return null;
+  const base = new Date(dateIso);
+  if (Number.isNaN(base.getTime())) return null;
+  const parsed = parseTime(time);
+  if (!parsed) return null;
+  const hours = Math.floor(parsed.seconds / 3600);
+  const minutes = Math.floor((parsed.seconds % 3600) / 60);
+  const seconds = parsed.seconds % 60;
+  base.setUTCHours(hours, minutes, seconds, 0);
+  return base.toISOString();
 }
 
 function deriveStatus(evidenceCount: number, updatedAt: string, seed: number): CaseStatus {

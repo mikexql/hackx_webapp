@@ -86,9 +86,9 @@ export default function CaseViewerClient({ caseId }: Props) {
         const fallbackSummary: CaseSummary = json.summary ?? {
           id: caseId,
           title: caseId,
-          description: 'Map assets synced from S3',
+          description: '-',
           status: 'open',
-          createdBy: '',
+          createdBy: '-',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           evidenceCount: json.evidence?.length ?? 0,
@@ -152,17 +152,11 @@ export default function CaseViewerClient({ caseId }: Props) {
     }
   };
 
-  if (loading) {
-    return <div className="p-10 text-muted-foreground">Loading case {caseId}…</div>;
-  }
-
   if (error) {
     return <div className="p-10 text-destructive">{error}</div>;
   }
 
-  if (!map || !baseImage) {
-    return <div className="p-10 text-muted-foreground">No map data for this case.</div>;
-  }
+  const mapReady = Boolean(map && baseImage);
 
   return (
     <div className="min-h-screen bg-transparent text-foreground">
@@ -203,8 +197,14 @@ export default function CaseViewerClient({ caseId }: Props) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-        <section className="rounded-2xl sm:rounded-[32px] border border-border/40 bg-card/40 p-3 sm:p-4 lg:p-6 shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
-          <MapEditor baseImage={baseImage} mapData={map} evidence={evidence} onEvidenceUpdate={setEvidence} />
+        <section className="rounded-2xl sm:rounded-[32px] border border-border/40 bg-card/40 p-3 sm:p-4 lg:p-6 shadow-[0_25px_80px_rgba(0,0,0,0.35)] min-h-[420px]">
+          {mapReady && baseImage && map ? (
+            <MapEditor baseImage={baseImage} mapData={map} evidence={evidence} onEvidenceUpdate={setEvidence} />
+          ) : (
+            <div className="flex h-full min-h-[360px] items-center justify-center rounded-2xl border border-dashed border-border/50 bg-secondary/10 text-sm text-muted-foreground">
+              {loading ? 'Loading case map…' : 'No map data for this case.'}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl sm:rounded-[32px] border border-border/40 bg-card/50 p-4 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
