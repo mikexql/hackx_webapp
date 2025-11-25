@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
-import type { Evidence, MapData } from "@types/types";
+import type { Evidence, MapData } from "../types/types";
 
 interface MapEditorProps {
     baseImage: string;
@@ -17,6 +17,17 @@ export default function MapEditor({
     onEvidenceUpdate,
     resolution = 0.05,
 }: MapEditorProps) {
+        const getNextMarkerId = () => {
+            let maxId = 0;
+            for (const ev of evidence) {
+                const numeric = Number(ev.id);
+                if (!Number.isNaN(numeric)) {
+                    maxId = Math.max(maxId, numeric);
+                }
+            }
+            return String(maxId + 1);
+        };
+
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -205,7 +216,7 @@ export default function MapEditor({
     // Add / Delete / Update
     const handleAddMarker = () => {
         const newEvidence: Evidence = {
-            id: `marker-${Date.now()}`,
+            id: getNextMarkerId(),
             x: "0",
             y: "0",
             time: new Date().toLocaleTimeString(),
@@ -331,7 +342,7 @@ export default function MapEditor({
                     width: "300px",
                     padding: "20px",
                     border: "1px solid #ccc",
-                    backgroundColor: "#f9f9f9",
+                    backgroundColor: "#000000ff",
                     borderRadius: "8px",
                 }}
             >

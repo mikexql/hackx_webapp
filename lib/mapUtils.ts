@@ -111,6 +111,19 @@ export function worldToPixel(
     return { x: px, y: py };
 }
 
+export function pixelToWorld(
+    pixelX: number,
+    pixelY: number,
+    origin: [number, number, number],
+    resolution: number,
+    height: number
+): Point {
+    const [ox, oy] = origin;
+    const x_world = pixelX * resolution + ox;
+    const y_world = (height - pixelY) * resolution + oy;
+    return { x: x_world, y: y_world };
+}
+
 export function convertEvidenceToPixels(
     evidence: any[],
     origin: [number, number, number],

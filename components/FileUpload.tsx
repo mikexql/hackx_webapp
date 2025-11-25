@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import type { MapData, Evidence } from '@types/types';
+import type { MapData, Evidence } from '../types/types';
 
 interface UploadResponse {
     success: boolean;

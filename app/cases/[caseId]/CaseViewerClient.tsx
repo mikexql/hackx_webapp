@@ -52,6 +52,9 @@ export default function CaseViewerClient({ caseId }: Props) {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Save failed');
+      if (Array.isArray(j.evidence)) {
+        setEvidence(j.evidence);
+      }
       setSavedMsg('Saved successfully');
     } catch (err: any) {
       setSavedMsg(`Save failed: ${err.message || String(err)}`);
