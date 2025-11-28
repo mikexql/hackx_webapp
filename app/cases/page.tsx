@@ -13,7 +13,7 @@ export default function CasesPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const link = process.env.NEXT_PUBLIC_FOXGLOVE_LINK;
+  const link = process.env.NEXT_PUBLIC_FOXGLOVE_LINK || "https://app.foxglove.dev/mike-e5803f88/p/prj_0e2hWBUlkSO7nouN/view?layoutId=lay_0e2hdR3Y0F0nyBCc&ds=foxglove-websocket&ds.url=wss%3A%2F%2Fbraeden-postlike-emiko.ngrok-free.dev";
 
 
   useEffect(() => {
